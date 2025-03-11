@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <ctime>
+#include <future>
 
 #include "network/asio_network_model.hpp"
 #include "protocol/messages.hpp"
@@ -229,41 +230,27 @@ public:
             uint16_t seqNum = generateSequenceNumber();
             request.setSequenceNumber(seqNum);
 
-            // 添加到待处理请求，标记为同步请求
-            addPendingRequest(seqNum, protocol::MessageType::GET_REAL_TIME_STATUS_RESP);
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::GET_REAL_TIME_STATUS_RESP);
 
             // 创建ScopeGuard，在函数结束时自动移除请求
             auto guard = makeScopeGuard([this, seqNum]() {
-                removePendingRequest(seqNum);
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
             });
 
             // 发送请求
             network_model_->sendMessage(request);
 
-            // 等待响应
-            std::unique_ptr<protocol::GetRealTimeStatusResponse> realTimeResp;
-            {
-                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
-                auto& pendingReq = pendingRequests_[seqNum];
-
-                if (!pendingReq.responseReceived) {
-                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
-                        [&pendingReq]() { return pendingReq.responseReceived; });
-                }
-
-                if (!pendingReq.responseReceived) {
-                    RealTimeStatus status;
-                    status.errorCode = ErrorCode_RealTimeStatus::TIMEOUT;
-                    return status;
-                }
-
-                auto* castedPtr = dynamic_cast<protocol::GetRealTimeStatusResponse*>(pendingReq.response.get());
-                if (castedPtr) {
-                    realTimeResp = std::unique_ptr<protocol::GetRealTimeStatusResponse>(castedPtr);
-                    pendingReq.response.release();  // 释放所有权但不删除对象
-                }
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                RealTimeStatus status;
+                status.errorCode = ErrorCode_RealTimeStatus::TIMEOUT;
+                return status;
             }
 
+            // 获取响应
+            auto realTimeResp = getResponse<protocol::GetRealTimeStatusResponse>(seqNum);
             if (!realTimeResp) {
                 RealTimeStatus status;
                 status.errorCode = ErrorCode_RealTimeStatus::INVALID_RESPONSE;
@@ -366,41 +353,27 @@ public:
             uint16_t seqNum = generateSequenceNumber();
             request.setSequenceNumber(seqNum);
 
-            // 添加到待处理请求，标记为同步请求
-            addPendingRequest(seqNum, protocol::MessageType::CANCEL_TASK_RESP);
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::CANCEL_TASK_RESP);
 
             // 创建ScopeGuard，在函数结束时自动移除请求
             auto guard = makeScopeGuard([this, seqNum]() {
-                removePendingRequest(seqNum);
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
             });
 
             // 发送请求
             network_model_->sendMessage(request);
 
-            // 等待响应
-            std::unique_ptr<protocol::CancelTaskResponse> cancelResp;
-            {
-                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
-                auto& pendingReq = pendingRequests_[seqNum];
-
-                if (!pendingReq.responseReceived) {
-                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
-                        [&pendingReq]() { return pendingReq.responseReceived; });
-                }
-
-                if (!pendingReq.responseReceived) {
-                    return false;
-                }
-
-                auto* castedPtr = dynamic_cast<protocol::CancelTaskResponse*>(pendingReq.response.get());
-                if (castedPtr) {
-                    cancelResp = std::unique_ptr<protocol::CancelTaskResponse>(castedPtr);
-                    pendingReq.response.release();  // 释放所有权但不删除对象
-                }
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                return false;
             }
 
-            return cancelResp && cancelResp->errorCode == protocol::ErrorCode_CancelTask::SUCCESS;
+            // 获取响应
+            auto response = getResponse<protocol::CancelTaskResponse>(seqNum);
 
+            return response && response->errorCode == protocol::ErrorCode_CancelTask::SUCCESS;
         } catch (const std::exception& e) {
             std::cerr << "request1004_CancelNavTask 异常: " << e.what() << std::endl;
             return false;
@@ -426,42 +399,28 @@ public:
             uint16_t seqNum = generateSequenceNumber();
             request.setSequenceNumber(seqNum);
 
-            // 添加到待处理请求，标记为同步请求
-            addPendingRequest(seqNum, protocol::MessageType::QUERY_STATUS_RESP);
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::QUERY_STATUS_RESP);
 
             // 创建ScopeGuard，在函数结束时自动移除请求
             auto guard = makeScopeGuard([this, seqNum]() {
-                removePendingRequest(seqNum);
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
             });
 
             // 发送请求
             network_model_->sendMessage(request);
 
-            // 等待响应
-            std::unique_ptr<protocol::QueryStatusResponse> statusResp;
-            {
-                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
-                auto& pendingReq = pendingRequests_[seqNum];
-
-                if (!pendingReq.responseReceived) {
-                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
-                        [&pendingReq]() { return pendingReq.responseReceived; });
-                }
-
-                if (!pendingReq.responseReceived) {
-                    TaskStatusResult result;
-                    result.errorCode = ErrorCode_QueryStatus::TIMEOUT;
-                    return result;
-                }
-
-                auto* castedPtr = dynamic_cast<protocol::QueryStatusResponse*>(pendingReq.response.get());
-                if (castedPtr) {
-                    statusResp = std::unique_ptr<protocol::QueryStatusResponse>(castedPtr);
-                    pendingReq.response.release();  // 释放所有权但不删除对象
-                }
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                TaskStatusResult result;
+                result.errorCode = ErrorCode_QueryStatus::TIMEOUT;
+                return result;
             }
 
-            if (!statusResp) {
+            // 获取响应
+            auto queryStatusResp = getResponse<protocol::QueryStatusResponse>(seqNum);
+            if (!queryStatusResp) {
                 TaskStatusResult result;
                 result.errorCode = ErrorCode_QueryStatus::INVALID_RESPONSE;
                 return result;
@@ -469,9 +428,9 @@ public:
 
             // 转换为SDK的TaskStatusResult
             TaskStatusResult result;
-            result.status = static_cast<Status_QueryStatus>(statusResp->status);
-            result.errorCode = static_cast<ErrorCode_QueryStatus>(statusResp->errorCode);
-            result.value = statusResp->value;
+            result.status = static_cast<Status_QueryStatus>(queryStatusResp->status);
+            result.errorCode = static_cast<ErrorCode_QueryStatus>(queryStatusResp->errorCode);
+            result.value = queryStatusResp->value;
 
             return result;
 
@@ -504,41 +463,27 @@ public:
             uint16_t seqNum = generateSequenceNumber();
             request.setSequenceNumber(seqNum);
 
-            // 添加到待处理请求，标记为同步请求
-            addPendingRequest(seqNum, protocol::MessageType::RTK_FUSION_DATA_RESP);
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::RTK_FUSION_DATA_RESP);
 
             // 创建ScopeGuard，在函数结束时自动移除请求
             auto guard = makeScopeGuard([this, seqNum]() {
-                removePendingRequest(seqNum);
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
             });
 
             // 发送请求
             network_model_->sendMessage(request);
 
-            // 等待响应
-            std::unique_ptr<protocol::RTKFusionDataResponse> rtkFusionResp;
-            {
-                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
-                auto& pendingReq = pendingRequests_[seqNum];
-
-                if (!pendingReq.responseReceived) {
-                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
-                        [&pendingReq]() { return pendingReq.responseReceived; });
-                }
-
-                if (!pendingReq.responseReceived) {
-                    RTKFusionData data;
-                    data.errorCode = ErrorCode_RTKFusion::TIMEOUT;
-                    return data;
-                }
-
-                auto* castedPtr = dynamic_cast<protocol::RTKFusionDataResponse*>(pendingReq.response.get());
-                if (castedPtr) {
-                    rtkFusionResp = std::unique_ptr<protocol::RTKFusionDataResponse>(castedPtr);
-                    pendingReq.response.release();  // 释放所有权但不删除对象
-                }
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                RTKFusionData data;
+                data.errorCode = ErrorCode_RTKFusion::TIMEOUT;
+                return data;
             }
 
+            // 获取响应
+            auto rtkFusionResp = getResponse<protocol::RTKFusionDataResponse>(seqNum);
             if (!rtkFusionResp) {
                 RTKFusionData data;
                 data.errorCode = ErrorCode_RTKFusion::INVALID_RESPONSE;
@@ -577,41 +522,27 @@ public:
             uint16_t seqNum = generateSequenceNumber();
             request.setSequenceNumber(seqNum);
 
-            // 添加到待处理请求，标记为同步请求
-            addPendingRequest(seqNum, protocol::MessageType::RTK_RAW_DATA_RESP);
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::RTK_RAW_DATA_RESP);
 
             // 创建ScopeGuard，在函数结束时自动移除请求
             auto guard = makeScopeGuard([this, seqNum]() {
-                removePendingRequest(seqNum);
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
             });
 
             // 发送请求
             network_model_->sendMessage(request);
 
-            // 等待响应
-            std::unique_ptr<protocol::RTKRawDataResponse> rtkRawResp;
-            {
-                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
-                auto& pendingReq = pendingRequests_[seqNum];
-
-                if (!pendingReq.responseReceived) {
-                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
-                        [&pendingReq]() { return pendingReq.responseReceived; });
-                }
-
-                if (!pendingReq.responseReceived) {
-                    RTKRawData data;
-                    data.errorCode = ErrorCode_RTKRaw::TIMEOUT;
-                    return data;
-                }
-
-                auto* castedPtr = dynamic_cast<protocol::RTKRawDataResponse*>(pendingReq.response.get());
-                if (castedPtr) {
-                    rtkRawResp = std::unique_ptr<protocol::RTKRawDataResponse>(castedPtr);
-                    pendingReq.response.release();  // 释放所有权但不删除对象
-                }
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                RTKRawData data;
+                data.errorCode = ErrorCode_RTKRaw::TIMEOUT;
+                return data;
             }
 
+            // 获取响应
+            auto rtkRawResp = getResponse<protocol::RTKRawDataResponse>(seqNum);
             if (!rtkRawResp) {
                 RTKRawData data;
                 data.errorCode = ErrorCode_RTKRaw::INVALID_RESPONSE;
@@ -645,15 +576,14 @@ public:
             protocol::MessageType msgType = message->getType();
 
             if (msgType == protocol::MessageType::NAVIGATION_TASK_RESP) {
-
-                NavigationResultCallback callback;
                 // 检查是否有等待此响应的请求
+                NavigationResultCallback callback{};
                 {
                     std::lock_guard<std::mutex> lock(navigation_result_callbacks_mutex_);
-                    auto it = navigation_result_callbacks_.find(seqNum);
-                    if (it != navigation_result_callbacks_.end()) {
-                        callback = it->second;
-                        navigation_result_callbacks_.erase(it);
+                    auto callbackIt = navigation_result_callbacks_.find(seqNum);
+                    if (callbackIt != navigation_result_callbacks_.end()) {
+                        callback = callbackIt->second;
+                        navigation_result_callbacks_.erase(callbackIt);
                     }
                 }
 
@@ -673,12 +603,20 @@ public:
             }
 
             // 处理其他类型的响应消息
-            std::lock_guard<std::mutex> lock(pending_requests_mutex_);
-            auto it = pendingRequests_.find(seqNum);
-            if (it != pendingRequests_.end() && it->second.expectedResponseType == msgType) {
-                it->second.response = std::move(message);
-                it->second.responseReceived = true;
-                it->second.cv->notify_one();
+            {
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                auto it = pendingRequests_.find(seqNum);
+                if (it != pendingRequests_.end() && it->second.expectedResponseType == msgType) {
+                    it->second.response = std::move(message);
+                    it->second.responseReceived = true;
+
+                    // 使用promise通知等待线程
+                    try {
+                        it->second.promise->set_value(true);
+                    } catch (const std::future_error&) {
+                        // 忽略已经设置过值的promise
+                    }
+                }
             }
         } catch (const std::exception& e) {
             std::cerr << "onMessageReceived 异常: " << e.what() << std::endl;
@@ -689,18 +627,36 @@ public:
 
 private:
 
-    void addPendingRequest(uint16_t sequenceNumber, protocol::MessageType expectedType) {
-        std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+    std::future<bool> addPendingRequest(uint16_t sequenceNumber, protocol::MessageType expectedType) {
         PendingRequest req;
         req.expectedResponseType = expectedType;
         req.responseReceived = false;
-        req.cv = std::make_shared<std::condition_variable>();
-        pendingRequests_.emplace(sequenceNumber, std::move(req));
+        req.promise = std::make_shared<std::promise<bool>>();
+
+        // 在插入前获取future
+        std::future<bool> future = req.promise->get_future();
+
+        {
+            std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+            pendingRequests_[sequenceNumber] = std::move(req);
+        }
+
+        return future;
     }
 
-    void removePendingRequest(uint16_t sequenceNumber) {
+    // 获取并清除响应
+    template<typename ResponseType>
+    std::unique_ptr<ResponseType> getResponse(uint16_t sequenceNumber) {
         std::lock_guard<std::mutex> lock(pending_requests_mutex_);
-        pendingRequests_.erase(sequenceNumber);
+        auto it = pendingRequests_.find(sequenceNumber);
+        if (it == pendingRequests_.end() || !it->second.responseReceived) {
+            return nullptr;
+        }
+
+        // 直接在 unique_ptr 的构造时进行 dynamic_cast
+        std::unique_ptr<ResponseType> result(dynamic_cast<ResponseType*>(it->second.response.release()));
+
+        return result;
     }
 
     // 获取当前时间戳
@@ -725,13 +681,13 @@ private:
         protocol::MessageType expectedResponseType{};
         std::unique_ptr<protocol::IMessage> response{};
         bool responseReceived{false};
-        std::shared_ptr<std::condition_variable> cv;
+        std::shared_ptr<std::promise<bool>> promise = std::make_shared<std::promise<bool>>();
     };
 
-    std::mutex pending_requests_mutex_;  // 保护 pendingRequests_ 的互斥锁
+    // 使用标准的std::map和互斥锁
+    std::mutex pending_requests_mutex_;
     std::map<uint16_t, PendingRequest> pendingRequests_;
 
-    // TODO: 没有超时清理
     std::mutex navigation_result_callbacks_mutex_;
     std::map<uint16_t, NavigationResultCallback> navigation_result_callbacks_;
 };
