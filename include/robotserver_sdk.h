@@ -84,6 +84,18 @@ public:
     TaskStatusResult request1007_NavTaskState();
 
     /**
+     * @brief request2102 获取RTK融合数据
+     * @return RTK融合数据
+     */
+    RTKFusionData request2102_RTKFusionData();
+
+    /**
+     * @brief request2103 获取RTK原始数据
+     * @return RTK原始数据
+     */
+    RTKRawData request2103_RTKRawData();
+
+    /**
      * @brief 获取SDK版本
      * @return SDK版本字符串
      */

@@ -8,6 +8,7 @@ find_package(Threads REQUIRED)
 # 添加子目录
 add_subdirectory(basic)
 add_subdirectory(advanced)
+add_subdirectory(test_2102)
 
 # 安装示例目录结构
 install(DIRECTORY

@@ -123,16 +123,3 @@ message(STATUS "  C++ flags:         ${CMAKE_CXX_FLAGS}")
 message(STATUS "  Boost version:     ${Boost_VERSION}")
 message(STATUS "")
 
-# 文档生成
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    add_custom_target(docs
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/docs/build_docs.sh
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "生成 API 文档..."
-        VERBATIM
-    )
-    message(STATUS "Doxygen found, 'docs' target available")
-else()
-    message(STATUS "Doxygen not found, 'docs' target not available")
-endif()

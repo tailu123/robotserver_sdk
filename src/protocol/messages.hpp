@@ -465,4 +465,239 @@ public:
     }
 };
 
+/**
+ * @brief RTK融合数据请求
+ */
+class RTKFusionDataRequest : public MessageBase {
+public:
+    std::string timestamp;
+
+    RTKFusionDataRequest() : timestamp(getCurrentTimestamp()) {}
+
+    MessageType getType() const override {
+        return MessageType::RTK_FUSION_DATA_REQ;
+    }
+
+    std::string serialize() const override {
+        // 使用XML格式
+        std::stringstream ss;
+        ss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        ss << "<PatrolDevice>\n";
+        ss << "<Type>2102</Type>\n";
+        ss << "<Command>1</Command>\n";
+        ss << "<Time>" << timestamp << "</Time>\n";
+        ss << "<Items/>\n";
+        ss << "</PatrolDevice>";
+        return ss.str();
+    }
+
+    bool deserialize(const std::string&) override {
+        return false;
+    }
+};
+
+/**
+ * @brief RTK融合数据响应
+ */
+class RTKFusionDataResponse : public MessageBase {
+public:
+    double longitude = 0.0;
+    double latitude = 0.0;
+    double altitude = 0.0;
+    double orientationX = 0.0;
+    double orientationY = 0.0;
+    double orientationZ = 0.0;
+    double orientationW = 0.0;
+    double linearVelocityX = 0.0;
+    double linearVelocityY = 0.0;
+    double linearVelocityZ = 0.0;
+    double angularVelocityX = 0.0;
+    double angularVelocityY = 0.0;
+    double angularVelocityZ = 0.0;
+
+    RTKFusionDataResponse() {}
+
+    MessageType getType() const override {
+        return MessageType::RTK_FUSION_DATA_RESP;
+    }
+
+    std::string serialize() const override {
+        // sdk不负责响应的序列化
+        return "";
+    }
+
+    bool deserialize(const std::string& data) override {
+        try {
+            rapidxml::xml_document<> doc;
+            std::vector<char> buffer(data.begin(), data.end());
+            buffer.push_back('\0');
+            doc.parse<rapidxml::parse_non_destructive>(&buffer[0]);
+
+            rapidxml::xml_node<>* root = doc.first_node("PatrolDevice");
+            if (!root) return false;
+
+            rapidxml::xml_node<>* items_node = root->first_node("Items");
+            if (!items_node) return false;
+
+            // 解析各个字段
+            auto get_node_value = [&](const char* name, auto& value) {
+                rapidxml::xml_node<>* node = items_node->first_node(name);
+                if (node) {
+                    std::stringstream ss(node->value());
+                    ss >> value;
+                }
+            };
+
+            get_node_value("Longitude", longitude);
+            get_node_value("Latitude", latitude);
+            get_node_value("Altitude", altitude);
+            get_node_value("OrientationX", orientationX);
+            get_node_value("OrientationY", orientationY);
+            get_node_value("OrientationZ", orientationZ);
+            get_node_value("OrientationW", orientationW);
+            get_node_value("LinearVelocityX", linearVelocityX);
+            get_node_value("LinearVelocityY", linearVelocityY);
+            get_node_value("LinearVelocityZ", linearVelocityZ);
+            get_node_value("AngularVelocityX", angularVelocityX);
+            get_node_value("AngularVelocityY", angularVelocityY);
+            get_node_value("AngularVelocityZ", angularVelocityZ);
+
+            return true;
+        } catch (const std::exception& e) {
+            return false;
+        }
+    }
+};
+
+/**
+ * @brief RTK原始数据请求
+ */
+class RTKRawDataRequest : public MessageBase {
+public:
+    std::string timestamp;
+
+    RTKRawDataRequest() : timestamp(getCurrentTimestamp()) {}
+
+    MessageType getType() const override {
+        return MessageType::RTK_RAW_DATA_REQ;
+    }
+
+    std::string serialize() const override {
+        // 使用XML格式
+        std::stringstream ss;
+        ss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        ss << "<PatrolDevice>\n";
+        ss << "<Type>2103</Type>\n";
+        ss << "<Command>1</Command>\n";
+        ss << "<Time>" << timestamp << "</Time>\n";
+        ss << "<Items/>\n";
+        ss << "</PatrolDevice>";
+        return ss.str();
+    }
+
+    bool deserialize(const std::string&) override {
+        return false;
+    }
+};
+
+/**
+ * @brief RTK原始数据响应
+ */
+class RTKRawDataResponse : public MessageBase {
+public:
+    std::string serialNo;
+    double utc = 0.0;
+    double lat = 0.0;
+    double lon = 0.0;
+    double elpHeight = 0.0;
+    double heading = 0.0;
+    double pitch = 0.0;
+    double rolling = 0.0;
+    double velN = 0.0;
+    double velE = 0.0;
+    double velD = 0.0;
+    double velG = 0.0;
+    double coordinateNorthing = 0.0;
+    double coordinateEasting = 0.0;
+    double northDistance = 0.0;
+    double eastDistance = 0.0;
+    uint32_t positionIndicator = 0;
+    uint32_t headingIndicator = 0;
+    uint32_t svn = 0;
+    int32_t diffAge = 0;
+    std::string stationId;
+    double baselineLength = 0.0;
+    uint32_t solutionSv = 0;
+
+    RTKRawDataResponse() {}
+
+    MessageType getType() const override {
+        return MessageType::RTK_RAW_DATA_RESP;
+    }
+
+    std::string serialize() const override {
+        // sdk不负责响应的序列化
+        return "";
+    }
+
+    bool deserialize(const std::string& data) override {
+        try {
+            rapidxml::xml_document<> doc;
+            std::vector<char> buffer(data.begin(), data.end());
+            buffer.push_back('\0');
+            doc.parse<rapidxml::parse_non_destructive>(&buffer[0]);
+
+            rapidxml::xml_node<>* root = doc.first_node("PatrolDevice");
+            if (!root) return false;
+
+            rapidxml::xml_node<>* items_node = root->first_node("Items");
+            if (!items_node) return false;
+
+            // 解析各个字段
+            auto get_node_value = [&](const char* name, auto& value) {
+                rapidxml::xml_node<>* node = items_node->first_node(name);
+                if (node) {
+                    std::stringstream ss(node->value());
+                    ss >> value;
+                }
+            };
+
+            auto get_string_value = [&](const char* name, std::string& value) {
+                rapidxml::xml_node<>* node = items_node->first_node(name);
+                if (node) {
+                    value = node->value();
+                }
+            };
+
+            get_string_value("Serial_NO", serialNo);
+            get_node_value("utc", utc);
+            get_node_value("Lat", lat);
+            get_node_value("Lon", lon);
+            get_node_value("ElpHeight", elpHeight);
+            get_node_value("Heading", heading);
+            get_node_value("Pitch", pitch);
+            get_node_value("Rolling", rolling);
+            get_node_value("Vel_N", velN);
+            get_node_value("Vel_E", velE);
+            get_node_value("Vel_D", velD);
+            get_node_value("Vel_G", velG);
+            get_node_value("Coordinate_Northing", coordinateNorthing);
+            get_node_value("Coordinate_Easting", coordinateEasting);
+            get_node_value("North_Distance", northDistance);
+            get_node_value("East_Distance", eastDistance);
+            get_node_value("Position_Indicator", positionIndicator);
+            get_node_value("Heading_Indicator", headingIndicator);
+            get_node_value("SVn", svn);
+            get_node_value("Diff_Age", diffAge);
+            get_string_value("Station_ID", stationId);
+            get_node_value("Baseline_length", baselineLength);
+            get_node_value("Solution_sv", solutionSv);
+
+            return true;
+        } catch (const std::exception& e) {
+            return false;
+        }
+    }
+};
+
 } // namespace protocol

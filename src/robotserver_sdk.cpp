@@ -110,6 +110,54 @@ RealTimeStatus convertToRealTimeStatus(const protocol::GetRealTimeStatusResponse
     return status;
 }
 
+RTKFusionData convertToRTKFusionData(const protocol::RTKFusionDataResponse& rtkFusionResp) {
+    RTKFusionData data;
+    data.longitude = rtkFusionResp.longitude;
+    data.latitude = rtkFusionResp.latitude;
+    data.altitude = rtkFusionResp.altitude;
+    data.orientationX = rtkFusionResp.orientationX;
+    data.orientationY = rtkFusionResp.orientationY;
+    data.orientationZ = rtkFusionResp.orientationZ;
+    data.orientationW = rtkFusionResp.orientationW;
+    data.linearVelocityX = rtkFusionResp.linearVelocityX;
+    data.linearVelocityY = rtkFusionResp.linearVelocityY;
+    data.linearVelocityZ = rtkFusionResp.linearVelocityZ;
+    data.angularVelocityX = rtkFusionResp.angularVelocityX;
+    data.angularVelocityY = rtkFusionResp.angularVelocityY;
+    data.angularVelocityZ = rtkFusionResp.angularVelocityZ;
+
+    return data;
+}
+
+RTKRawData convertToRTKRawData(const protocol::RTKRawDataResponse& rtkRawResp) {
+    RTKRawData data;
+    data.serialNo = rtkRawResp.serialNo;
+    data.utc = rtkRawResp.utc;
+    data.lat = rtkRawResp.lat;
+    data.lon = rtkRawResp.lon;
+    data.elpHeight = rtkRawResp.elpHeight;
+    data.heading = rtkRawResp.heading;
+    data.pitch = rtkRawResp.pitch;
+    data.rolling = rtkRawResp.rolling;
+    data.velN = rtkRawResp.velN;
+    data.velE = rtkRawResp.velE;
+    data.velD = rtkRawResp.velD;
+    data.velG = rtkRawResp.velG;
+    data.coordinateNorthing = rtkRawResp.coordinateNorthing;
+    data.coordinateEasting = rtkRawResp.coordinateEasting;
+    data.northDistance = rtkRawResp.northDistance;
+    data.eastDistance = rtkRawResp.eastDistance;
+    data.positionIndicator = rtkRawResp.positionIndicator;
+    data.headingIndicator = rtkRawResp.headingIndicator;
+    data.svn = rtkRawResp.svn;
+    data.diffAge = rtkRawResp.diffAge;
+    data.stationId = rtkRawResp.stationId;
+    data.baselineLength = rtkRawResp.baselineLength;
+    data.solutionSv = rtkRawResp.solutionSv;
+
+    return data;
+}
+
 // SDK实现类
 class RobotServerSdkImpl : public network::INetworkCallback {
 public:
@@ -440,6 +488,152 @@ public:
         }
     }
 
+    RTKFusionData request2102_RTKFusionData() {
+        try {
+            if (!isConnected()) {
+                RTKFusionData data;
+                data.errorCode = ErrorCode_RTKFusion::NOT_CONNECTED;
+                return data;
+            }
+
+            // 创建请求消息
+            protocol::RTKFusionDataRequest request;
+            request.timestamp = getCurrentTimestamp();
+
+            // 生成并设置序列号
+            uint16_t seqNum = generateSequenceNumber();
+            request.setSequenceNumber(seqNum);
+
+            // 添加到待处理请求，标记为同步请求
+            addPendingRequest(seqNum, protocol::MessageType::RTK_FUSION_DATA_RESP);
+
+            // 创建ScopeGuard，在函数结束时自动移除请求
+            auto guard = makeScopeGuard([this, seqNum]() {
+                removePendingRequest(seqNum);
+            });
+
+            // 发送请求
+            network_model_->sendMessage(request);
+
+            // 等待响应
+            std::unique_ptr<protocol::RTKFusionDataResponse> rtkFusionResp;
+            {
+                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
+                auto& pendingReq = pendingRequests_[seqNum];
+
+                if (!pendingReq.responseReceived) {
+                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
+                        [&pendingReq]() { return pendingReq.responseReceived; });
+                }
+
+                if (!pendingReq.responseReceived) {
+                    RTKFusionData data;
+                    data.errorCode = ErrorCode_RTKFusion::TIMEOUT;
+                    return data;
+                }
+
+                auto* castedPtr = dynamic_cast<protocol::RTKFusionDataResponse*>(pendingReq.response.get());
+                if (castedPtr) {
+                    rtkFusionResp = std::unique_ptr<protocol::RTKFusionDataResponse>(castedPtr);
+                    pendingReq.response.release();  // 释放所有权但不删除对象
+                }
+            }
+
+            if (!rtkFusionResp) {
+                RTKFusionData data;
+                data.errorCode = ErrorCode_RTKFusion::INVALID_RESPONSE;
+                return data;
+            }
+
+            // 转换为SDK的RTKFusionData
+            return convertToRTKFusionData(*rtkFusionResp);
+
+        } catch (const std::exception& e) {
+            std::cerr << "request2102_RTKFusionData 异常: " << e.what() << std::endl;
+            RTKFusionData data;
+            data.errorCode = ErrorCode_RTKFusion::UNKNOWN_ERROR;
+            return data;
+        } catch (...) {
+            std::cerr << "request2102_RTKFusionData 未知异常" << std::endl;
+            RTKFusionData data;
+            data.errorCode = ErrorCode_RTKFusion::UNKNOWN_ERROR;
+            return data;
+        }
+    }
+
+    RTKRawData request2103_RTKRawData() {
+        try {
+            if (!isConnected()) {
+                RTKRawData data;
+                data.errorCode = ErrorCode_RTKRaw::NOT_CONNECTED;
+                return data;
+            }
+
+            // 创建请求消息
+            protocol::RTKRawDataRequest request;
+            request.timestamp = getCurrentTimestamp();
+
+            // 生成并设置序列号
+            uint16_t seqNum = generateSequenceNumber();
+            request.setSequenceNumber(seqNum);
+
+            // 添加到待处理请求，标记为同步请求
+            addPendingRequest(seqNum, protocol::MessageType::RTK_RAW_DATA_RESP);
+
+            // 创建ScopeGuard，在函数结束时自动移除请求
+            auto guard = makeScopeGuard([this, seqNum]() {
+                removePendingRequest(seqNum);
+            });
+
+            // 发送请求
+            network_model_->sendMessage(request);
+
+            // 等待响应
+            std::unique_ptr<protocol::RTKRawDataResponse> rtkRawResp;
+            {
+                std::unique_lock<std::mutex> lock(pending_requests_mutex_);
+                auto& pendingReq = pendingRequests_[seqNum];
+
+                if (!pendingReq.responseReceived) {
+                    pendingReq.cv->wait_for(lock, options_.requestTimeout,
+                        [&pendingReq]() { return pendingReq.responseReceived; });
+                }
+
+                if (!pendingReq.responseReceived) {
+                    RTKRawData data;
+                    data.errorCode = ErrorCode_RTKRaw::TIMEOUT;
+                    return data;
+                }
+
+                auto* castedPtr = dynamic_cast<protocol::RTKRawDataResponse*>(pendingReq.response.get());
+                if (castedPtr) {
+                    rtkRawResp = std::unique_ptr<protocol::RTKRawDataResponse>(castedPtr);
+                    pendingReq.response.release();  // 释放所有权但不删除对象
+                }
+            }
+
+            if (!rtkRawResp) {
+                RTKRawData data;
+                data.errorCode = ErrorCode_RTKRaw::INVALID_RESPONSE;
+                return data;
+            }
+
+            // 转换为SDK的RTKRawData
+            return convertToRTKRawData(*rtkRawResp);
+
+        } catch (const std::exception& e) {
+            std::cerr << "request2103_RTKRawData 异常: " << e.what() << std::endl;
+            RTKRawData data;
+            data.errorCode = ErrorCode_RTKRaw::UNKNOWN_ERROR;
+            return data;
+        } catch (...) {
+            std::cerr << "request2103_RTKRawData 未知异常" << std::endl;
+            RTKRawData data;
+            data.errorCode = ErrorCode_RTKRaw::UNKNOWN_ERROR;
+            return data;
+        }
+    }
+
     // 实现网络回调接口
     void onMessageReceived(std::unique_ptr<protocol::IMessage> message) override {
         try {
@@ -576,6 +770,14 @@ bool RobotServerSdk::request1004_CancelNavTask() {
 
 TaskStatusResult RobotServerSdk::request1007_NavTaskState() {
     return impl_->request1007_NavTaskState();
+}
+
+RTKFusionData RobotServerSdk::request2102_RTKFusionData() {
+    return impl_->request2102_RTKFusionData();
+}
+
+RTKRawData RobotServerSdk::request2103_RTKRawData() {
+    return impl_->request2103_RTKRawData();
 }
 
 std::string RobotServerSdk::getVersion() {
