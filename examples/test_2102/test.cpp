@@ -40,13 +40,18 @@ int main(int argc, char* argv[]) {
         // 等待2秒
         std::this_thread::sleep_for(std::chrono::seconds(2));
 
-        // 获取RTK融合数据
-        robotserver_sdk::RTKFusionData rtkFusionData = sdk.request2102_RTKFusionData();
-        std::cout << "RTK融合数据: " << rtkFusionData.longitude << ", " << rtkFusionData.latitude << ", " << rtkFusionData.altitude << std::endl;
+        while (true) {
+            // 获取RTK融合数据
+            robotserver_sdk::RTKFusionData rtkFusionData = sdk.request2102_RTKFusionData();
+            std::cout << "RTK融合数据: " << rtkFusionData.longitude << ", " << rtkFusionData.latitude << ", " << rtkFusionData.altitude << std::endl;
 
-        // 获取RTK原始数据
-        robotserver_sdk::RTKRawData rtkRawData = sdk.request2103_RTKRawData();
-        std::cout << "RTK原始数据: " << rtkRawData.serialNo << ", " << rtkRawData.utc << ", " << rtkRawData.lat << ", " << rtkRawData.lon << ", " << rtkRawData.elpHeight << std::endl;
+            // 获取RTK原始数据
+            robotserver_sdk::RTKRawData rtkRawData = sdk.request2103_RTKRawData();
+            std::cout << "RTK原始数据: " << rtkRawData.serialNo << ", " << rtkRawData.utc << ", " << rtkRawData.lat << ", " << rtkRawData.lon << ", " << rtkRawData.elpHeight << std::endl;
+
+            // 等待1秒
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
 
         // 断开连接
         sdk.disconnect();
