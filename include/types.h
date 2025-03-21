@@ -1,11 +1,11 @@
 #pragma once
 
-#include <functional>
-#include <string>
-#include <vector>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
 namespace robotserver_sdk {
 
 /**
@@ -227,19 +227,10 @@ struct SdkOptions {
  * @brief 2102 RTK融合数据
  */
 struct RTKFusionData {
-    double longitude = 0.0;         ///< 经度（融合后）
-    double latitude = 0.0;          ///< 纬度（融合后）
-    double altitude = 0.0;          ///< 高度（融合后）
-    double orientationX = 0.0;      ///< 四元数X分量
-    double orientationY = 0.0;      ///< 四元数Y分量
-    double orientationZ = 0.0;      ///< 四元数Z分量
-    double orientationW = 0.0;      ///< 四元数W分量
-    double linearVelocityX = 0.0;   ///< 线速度（正东方向）
-    double linearVelocityY = 0.0;   ///< 线速度（正北方向）
-    double linearVelocityZ = 0.0;   ///< 线速度（正天方向）
-    double angularVelocityX = 0.0;  ///< X轴角速度
-    double angularVelocityY = 0.0;  ///< Y轴角速度
-    double angularVelocityZ = 0.0;  ///< Z轴角速度
+    float longitude = 0.0;         ///< 经度（融合后）
+    float latitude = 0.0;          ///< 纬度（融合后）
+    float elpHeight = 0.0;         ///< 椭球高（融合后）
+    float yaw = 0.0;               ///< 偏航角度
 
     ErrorCode_RTKFusion errorCode = ErrorCode_RTKFusion::SUCCESS; ///< 错误码
 };
@@ -248,29 +239,10 @@ struct RTKFusionData {
  * @brief 2103 RTK原始数据
  */
 struct RTKRawData {
-    std::string serialNo;           ///< GNSS 设备序列号
-    double utc = 0.0;               ///< UTC 时间戳
-    double lat = 0.0;               ///< 纬度（原始数据）
-    double lon = 0.0;               ///< 经度（原始数据）
-    double elpHeight = 0.0;         ///< 高度（原始数据）
-    double heading = 0.0;           ///< 航向角
-    double pitch = 0.0;             ///< 俯仰角
-    double rolling = 0.0;           ///< 横滚角
-    double velN = 0.0;              ///< 速度信息（北）
-    double velE = 0.0;              ///< 速度信息（东）
-    double velD = 0.0;              ///< 速度信息（垂直）
-    double velG = 0.0;              ///< 速度信息（总）
-    double coordinateNorthing = 0.0;///< 北向坐标
-    double coordinateEasting = 0.0; ///< 东向坐标
-    double northDistance = 0.0;     ///< 相对北向距离
-    double eastDistance = 0.0;      ///< 相对东向距离
-    uint32_t positionIndicator = 0; ///< 定位精度指示
-    uint32_t headingIndicator = 0;  ///< 定向精度指示
-    uint32_t svn = 0;               ///< 参与解算的卫星数
-    int32_t diffAge = 0;            ///< 差分数据年龄
-    std::string stationId;          ///< 差分基站 ID
-    double baselineLength = 0.0;    ///< RTK 基线长度
-    uint32_t solutionSv = 0;        ///< 参与解算的卫星数（高精度）
+    float longitude = 0.0;         ///< 经度（原始数据）
+    float latitude = 0.0;          ///< 纬度（原始数据）
+    float elpHeight = 0.0;         ///< 椭球高（原始数据）
+    float yaw = 0.0;               ///< 偏航角度
 
     ErrorCode_RTKRaw errorCode = ErrorCode_RTKRaw::SUCCESS; ///< 错误码
 };

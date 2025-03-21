@@ -70,7 +70,9 @@ private:
         {1002, MessageType::GET_REAL_TIME_STATUS_RESP},
         {1003, MessageType::NAVIGATION_TASK_RESP},
         {1004, MessageType::CANCEL_TASK_RESP},
-        {1007, MessageType::QUERY_STATUS_RESP}
+        {1007, MessageType::QUERY_STATUS_RESP},
+        {2102, MessageType::RTK_FUSION_DATA_RESP},
+        {2103, MessageType::RTK_RAW_DATA_RESP}
     };
 };
 

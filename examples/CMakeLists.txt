@@ -9,6 +9,8 @@ find_package(Threads REQUIRED)
 add_subdirectory(basic)
 add_subdirectory(advanced)
 add_subdirectory(test_2102)
+add_subdirectory(test_pronto)
+add_subdirectory(test_pronto_2)
 
 # 安装示例目录结构
 install(DIRECTORY

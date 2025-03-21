@@ -21,6 +21,10 @@ std::unique_ptr<IMessage> createMessage(MessageType type) {
             return std::make_unique<QueryStatusRequest>();
         case MessageType::QUERY_STATUS_RESP:
             return std::make_unique<QueryStatusResponse>();
+        case MessageType::RTK_FUSION_DATA_RESP:
+            return std::make_unique<RTKFusionDataResponse>();
+        case MessageType::RTK_RAW_DATA_RESP:
+            return std::make_unique<RTKRawDataResponse>();
         default:
             return nullptr;
     }

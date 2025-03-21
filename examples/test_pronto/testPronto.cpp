@@ -37,27 +37,10 @@ int main(int argc, char* argv[]) {
 
         std::cout << "连接成功!" << std::endl;
 
-        // 等待2秒
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-
-        // 获取RTK融合数据
-        robotserver_sdk::RTKFusionData rtkFusionData = sdk.request2102_RTKFusionData();
-        std::cout << "RTK融合数据: " << rtkFusionData.longitude
-            << ", " << rtkFusionData.latitude
-            << ", " << rtkFusionData.elpHeight
-            << ", " << rtkFusionData.yaw
-            << ", errorCode: " << static_cast<int>(rtkFusionData.errorCode) << std::endl;
-
-        // 获取RTK原始数据
-        robotserver_sdk::RTKRawData rtkRawData = sdk.request2103_RTKRawData();
-        std::cout << "RTK原始数据: " << rtkRawData.longitude
-            << ", " << rtkRawData.latitude
-            << ", " << rtkRawData.elpHeight
-            << ", " << rtkRawData.yaw
-            << ", errorCode: " << static_cast<int>(rtkRawData.errorCode) << std::endl;
-
-        // 等待1秒
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (true) {
+            sdk.request2103_RTKRawData();
+            sdk.request2102_RTKFusionData();
+        }
 
         // 断开连接
         sdk.disconnect();

@@ -115,46 +115,18 @@ RTKFusionData convertToRTKFusionData(const protocol::RTKFusionDataResponse& rtkF
     RTKFusionData data;
     data.longitude = rtkFusionResp.longitude;
     data.latitude = rtkFusionResp.latitude;
-    data.altitude = rtkFusionResp.altitude;
-    data.orientationX = rtkFusionResp.orientationX;
-    data.orientationY = rtkFusionResp.orientationY;
-    data.orientationZ = rtkFusionResp.orientationZ;
-    data.orientationW = rtkFusionResp.orientationW;
-    data.linearVelocityX = rtkFusionResp.linearVelocityX;
-    data.linearVelocityY = rtkFusionResp.linearVelocityY;
-    data.linearVelocityZ = rtkFusionResp.linearVelocityZ;
-    data.angularVelocityX = rtkFusionResp.angularVelocityX;
-    data.angularVelocityY = rtkFusionResp.angularVelocityY;
-    data.angularVelocityZ = rtkFusionResp.angularVelocityZ;
+    data.elpHeight = rtkFusionResp.elpHeight;
+    data.yaw = rtkFusionResp.yaw;
 
     return data;
 }
 
 RTKRawData convertToRTKRawData(const protocol::RTKRawDataResponse& rtkRawResp) {
     RTKRawData data;
-    data.serialNo = rtkRawResp.serialNo;
-    data.utc = rtkRawResp.utc;
-    data.lat = rtkRawResp.lat;
-    data.lon = rtkRawResp.lon;
+    data.longitude = rtkRawResp.longitude;
+    data.latitude = rtkRawResp.latitude;
     data.elpHeight = rtkRawResp.elpHeight;
-    data.heading = rtkRawResp.heading;
-    data.pitch = rtkRawResp.pitch;
-    data.rolling = rtkRawResp.rolling;
-    data.velN = rtkRawResp.velN;
-    data.velE = rtkRawResp.velE;
-    data.velD = rtkRawResp.velD;
-    data.velG = rtkRawResp.velG;
-    data.coordinateNorthing = rtkRawResp.coordinateNorthing;
-    data.coordinateEasting = rtkRawResp.coordinateEasting;
-    data.northDistance = rtkRawResp.northDistance;
-    data.eastDistance = rtkRawResp.eastDistance;
-    data.positionIndicator = rtkRawResp.positionIndicator;
-    data.headingIndicator = rtkRawResp.headingIndicator;
-    data.svn = rtkRawResp.svn;
-    data.diffAge = rtkRawResp.diffAge;
-    data.stationId = rtkRawResp.stationId;
-    data.baselineLength = rtkRawResp.baselineLength;
-    data.solutionSv = rtkRawResp.solutionSv;
+    data.yaw = rtkRawResp.yaw;
 
     return data;
 }
