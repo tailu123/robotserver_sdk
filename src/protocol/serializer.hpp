@@ -72,7 +72,8 @@ private:
         {1004, MessageType::CANCEL_TASK_RESP},
         {1007, MessageType::QUERY_STATUS_RESP},
         {2102, MessageType::RTK_FUSION_DATA_RESP},
-        {2103, MessageType::RTK_RAW_DATA_RESP}
+        {2103, MessageType::RTK_RAW_DATA_RESP},
+        {2, MessageType::MOTION_CONTROL_RESP}
     };
 };
 

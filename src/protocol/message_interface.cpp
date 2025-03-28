@@ -25,6 +25,8 @@ std::unique_ptr<IMessage> createMessage(MessageType type) {
             return std::make_unique<RTKFusionDataResponse>();
         case MessageType::RTK_RAW_DATA_RESP:
             return std::make_unique<RTKRawDataResponse>();
+        case MessageType::MOTION_CONTROL_RESP:
+            return std::make_unique<MotionControlResponse>();
         default:
             return nullptr;
     }

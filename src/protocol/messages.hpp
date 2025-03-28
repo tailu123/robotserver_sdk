@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <ctime>
+#include <variant>
 
 namespace protocol {
 
@@ -573,6 +574,103 @@ public:
     }
 
     bool deserialize(const std::string& data) override;
+};
+
+/**
+ * @brief 运动控制指令请求
+ */
+class MotionControlRequest : public MessageBase {
+public:
+    int command = 1;
+    std::variant<float, int> value = -1.0f;
+    std::string timestamp;
+
+    MotionControlRequest() : timestamp(getCurrentTimestamp()) {}
+
+    // // 设置浮点值
+    // void setValue(float val) {
+    //     value = val;
+    // }
+
+    // // 设置整数值
+    // void setValue(int val) {
+    //     value = val;
+    // }
+    template<typename T>
+    void setValue(T val) {
+        static_assert(std::is_same_v<T, int> || std::is_same_v<T, float>, "setValue only supports int or float");
+        value = val;
+    }
+
+    MessageType getType() const override {
+        return MessageType::MOTION_CONTROL_REQ;
+    }
+
+    std::string serialize() const override {
+        // 使用XML格式
+        std::stringstream ss;
+        ss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        ss << "<PatrolDevice>\n";
+        ss << "<Type>2</Type>\n";
+        ss << "<Command>" << command << "</Command>\n";
+        ss << "<Time>" << timestamp << "</Time>\n";
+        ss << "<Items>\n";
+
+        // 根据值的类型序列化
+        ss << "  <Value>";
+        if (std::holds_alternative<float>(value)) {
+            ss << std::get<float>(value);
+        } else {
+            ss << std::get<int>(value);
+        }
+        ss << "</Value>\n";
+
+        ss << "</Items>\n";
+        ss << "</PatrolDevice>";
+        return ss.str();
+    }
+
+    bool deserialize(const std::string&) override {
+        return false;
+    }
+};
+
+/**
+ * @brief 运动控制指令响应
+ */
+class MotionControlResponse : public MessageBase {
+public:
+    std::variant<float, int> value = -1.0f;
+    int errorCode = 0;
+
+    MotionControlResponse() {}
+
+    MessageType getType() const override {
+        return MessageType::MOTION_CONTROL_RESP;
+    }
+
+    std::string serialize() const override {
+        // sdk不负责响应的序列化
+        return "";
+    }
+
+    bool deserialize(const std::string& data) override;
+
+    // 获取浮点值
+    float getFloatValue() const {
+        if (std::holds_alternative<float>(value)) {
+            return std::get<float>(value);
+        }
+        return static_cast<float>(std::get<int>(value));
+    }
+
+    // 获取整数值
+    int getIntValue() const {
+        if (std::holds_alternative<int>(value)) {
+            return std::get<int>(value);
+        }
+        return static_cast<int>(std::get<float>(value));
+    }
 };
 
 } // namespace protocol

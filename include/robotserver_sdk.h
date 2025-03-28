@@ -101,6 +101,46 @@ public:
      */
     static std::string getVersion();
 
+    /**
+     * @brief request2_SpeedControl 设置速度控制指令
+     * @param cmd 速度命令类型
+     * @param speed 速度值（m/s或rad/s）
+     * @return 操作结果
+     *
+     * 注意：根据协议要求，速度控制指令的发送频率不应超过5Hz。
+     * 如果调用过于频繁（小于200ms间隔），函数将返回失败结果。
+     */
+    MotionControlResult request2_SpeedControl(SpeedCommand cmd, float speed);
+
+    /**
+     * @brief request2_ActionControl 执行动作控制指令
+     * @param cmd 动作命令类型
+     * @return 操作结果
+     */
+    MotionControlResult request2_ActionControl(ActionCommand cmd);
+
+    /**
+     * @brief request2_Configure 设置配置参数
+     * @param cmd 配置命令类型
+     * @param value 配置值
+     * @return 操作结果
+     */
+    MotionControlResult request2_Configure(ConfigCommand cmd, int value);
+
+    /**
+     * @brief request2_SwitchBodyHeight 切换身体高度
+     * @param height 身体高度模式：0表示站立，1表示匍匐
+     * @return 操作结果
+     */
+    MotionControlResult request2_SwitchBodyHeight(int height);
+
+    /**
+     * @brief request2_SwitchGait 切换步态模式
+     * @param mode 步态模式
+     * @return 操作结果
+     */
+    MotionControlResult request2_SwitchGait(GaitMode mode);
+
 private:
     std::unique_ptr<RobotServerSdkImpl> impl_; ///< PIMPL实现
 };

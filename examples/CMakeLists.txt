@@ -8,6 +8,7 @@ find_package(Threads REQUIRED)
 # 添加子目录
 add_subdirectory(basic)
 add_subdirectory(advanced)
+add_subdirectory(test_2)
 add_subdirectory(test_2102)
 add_subdirectory(test_pronto)
 add_subdirectory(test_pronto_2)

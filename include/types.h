@@ -126,6 +126,64 @@ enum class ErrorCode_RTKRaw {
 };
 
 /**
+ * @brief 运动控制-速度命令枚举
+ */
+enum class SpeedCommand {
+    FORWARD = 1,            ///< 前进
+    BACKWARD = 2,           ///< 后退
+    TURN_LEFT = 3,          ///< 左转
+    TURN_RIGHT = 4,         ///< 右转
+    TRANSVERSE_LEFT = 11,   ///< 左移
+    TRANSVERSE_RIGHT = 12   ///< 右移
+};
+
+/**
+ * @brief 运动控制-动作命令枚举
+ */
+enum class ActionCommand {
+    MOTION_CONTROL_OVER = 6,    ///< 运动控制结束
+    SOFT_EMERGENCY_STOP = 13,   ///< 软急停
+    STOP = 14,                  ///< 停止/站住
+    FINISH = 15,                ///< 完成/趴下
+    STAND_UP = 16,              ///< 站立/站起
+    FORCE = 17,                 ///< 力控
+    START_STEPPING = 18,        ///< 开始踏步
+    GO_CHARGE = 21,             ///< 前往充电
+    EXIT_CHARGE = 22            ///< 退出充电
+};
+
+/**
+ * @brief 运动控制-配置命令枚举
+ */
+enum class ConfigCommand {
+    SWITCH_BODY_HEIGHT = 19,    ///< 切换身体高度
+    GAIT_SWITCH = 20            ///< 切换步态
+};
+
+/**
+ * @brief 步态模式枚举
+ */
+enum class GaitMode {
+    WALKING = 0,              ///< 行走步态
+    NORMAL_STEPPING = 1,      ///< 普通梯步步态
+    SLOPE_ANTI_SLIP = 2,      ///< 斜坡/防滑步态
+    SENSING_STEPPING = 4      ///< 感知梯步步态
+};
+
+/**
+ * @brief 2 运动控制错误码枚举
+ */
+enum class ErrorCode_MotionControl {
+    SUCCESS = 0,            ///< 操作成功
+    FAILURE = 1,            ///< 操作失败
+
+    NOT_CONNECTED = 2,      ///< 未连接
+    TIMEOUT = 3,            ///< 超时
+    TOO_FREQUENT = 4,       ///< 命令发送过于频繁
+    UNKNOWN_ERROR = 5       ///< 未知错误
+};
+
+/**
  * @brief 导航点信息
  */
 struct NavigationPoint {
@@ -251,5 +309,13 @@ struct RTKRawData {
  * @brief 导航任务结果回调函数类型
  */
 using NavigationResultCallback = std::function<void(const NavigationResult&)>;
+
+/**
+ * @brief 运动控制响应结果
+ */
+struct MotionControlResult {
+    float value = 0.0f;      ///< 控制值，与请求对应
+    ErrorCode_MotionControl errorCode = ErrorCode_MotionControl::SUCCESS; ///< 错误码
+};
 
 } // namespace robotserver_sdk

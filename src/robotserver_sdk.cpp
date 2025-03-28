@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <ctime>
 #include <future>
+#include <variant>
 
 #include "network/asio_network_model.hpp"
 #include "protocol/messages.hpp"
@@ -597,6 +598,188 @@ public:
         }
     }
 
+    MotionControlResult request2_MotionControl(int command, std::variant<float, int> value) {
+        try {
+            if (!isConnected()) {
+                MotionControlResult result;
+                result.errorCode = ErrorCode_MotionControl::NOT_CONNECTED;
+                return result;
+            }
+
+            // 创建请求消息
+            protocol::MotionControlRequest request;
+            request.command = command;
+
+            // // 设置值
+            // if (std::holds_alternative<float>(value)) {
+            //     request.setValue(std::get<float>(value));
+            // } else {
+            //     request.setValue(std::get<int>(value));
+            // }
+
+            std::visit([&request](auto&& arg) {
+                request.setValue(arg);
+            }, value);
+
+            request.timestamp = getCurrentTimestamp();
+
+            // 生成并设置序列号
+            uint16_t seqNum = generateSequenceNumber();
+            request.setSequenceNumber(seqNum);
+
+            // 添加到待处理请求，标记为同步请求，并获取future
+            std::future<bool> responseFuture = addPendingRequest(seqNum, protocol::MessageType::MOTION_CONTROL_RESP);
+
+            // 创建ScopeGuard，在函数结束时自动移除请求
+            auto guard = makeScopeGuard([this, seqNum]() {
+                std::lock_guard<std::mutex> lock(pending_requests_mutex_);
+                pendingRequests_.erase(seqNum);
+            });
+
+            // 发送请求
+            network_model_->sendMessage(request);
+
+            // 等待响应，使用future替代条件变量
+            if (responseFuture.wait_for(options_.requestTimeout) != std::future_status::ready || !responseFuture.get()) {
+                MotionControlResult result;
+                result.errorCode = ErrorCode_MotionControl::TIMEOUT;
+                return result;
+            }
+
+            // 获取响应
+            auto response = getResponse<protocol::MotionControlResponse>(seqNum);
+            if (!response) {
+                MotionControlResult result;
+                result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+                return result;
+            }
+
+            // 转换为SDK的MotionControlResult
+            MotionControlResult result;
+            result.value = response->getFloatValue();
+            result.errorCode = static_cast<ErrorCode_MotionControl>(response->errorCode);
+            return result;
+        } catch (const std::exception& e) {
+            std::cerr << "request2_MotionControl 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_MotionControl 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
+    MotionControlResult request2_SpeedControl(SpeedCommand cmd, float speed) {
+        try {
+            // 频率限制检查
+            auto now = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - lastSpeedCommandTime_).count();
+
+            // 确保频率不超过5Hz (200ms)
+            if (elapsed < 200) {
+                MotionControlResult result;
+                result.errorCode = ErrorCode_MotionControl::TOO_FREQUENT;
+                return result;
+            }
+
+            // 更新时间戳
+            lastSpeedCommandTime_ = now;
+
+            // 发送命令
+            return request2_MotionControl(static_cast<int>(cmd), speed);
+        } catch (const std::exception& e) {
+            std::cerr << "request2_SpeedControl 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_SpeedControl 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
+    MotionControlResult request2_ActionControl(ActionCommand cmd) {
+        try {
+            // 动作控制不需要频率限制
+            return request2_MotionControl(static_cast<int>(cmd), 0);
+        } catch (const std::exception& e) {
+            std::cerr << "request2_ActionControl 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_ActionControl 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
+    MotionControlResult request2_Configure(ConfigCommand cmd, int value) {
+        try {
+            // 配置命令不需要频率限制
+            return request2_MotionControl(static_cast<int>(cmd), value);
+        } catch (const std::exception& e) {
+            std::cerr << "request2_Configure 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_Configure 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
+    MotionControlResult request2_SwitchBodyHeight(int height) {
+        try {
+            // 参数验证
+            if (height != 0 && height != 1) {
+                std::cerr << "request2_SwitchBodyHeight 参数错误: height必须为0(站立)或1(匍匐)" << std::endl;
+                MotionControlResult result;
+                result.errorCode = ErrorCode_MotionControl::FAILURE;
+                return result;
+            }
+
+            // 使用Configure命令切换身体高度
+            return request2_Configure(ConfigCommand::SWITCH_BODY_HEIGHT, height);
+        } catch (const std::exception& e) {
+            std::cerr << "request2_SwitchBodyHeight 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_SwitchBodyHeight 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
+    MotionControlResult request2_SwitchGait(GaitMode mode) {
+        try {
+            // 使用Configure命令设置步态模式
+            return request2_Configure(ConfigCommand::GAIT_SWITCH, static_cast<int>(mode));
+        } catch (const std::exception& e) {
+            std::cerr << "request2_SwitchGait 异常: " << e.what() << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        } catch (...) {
+            std::cerr << "request2_SwitchGait 未知异常" << std::endl;
+            MotionControlResult result;
+            result.errorCode = ErrorCode_MotionControl::UNKNOWN_ERROR;
+            return result;
+        }
+    }
+
 private:
 
     std::future<bool> addPendingRequest(uint16_t sequenceNumber, protocol::MessageType expectedType) {
@@ -662,6 +845,9 @@ private:
 
     std::mutex navigation_result_callbacks_mutex_;
     std::map<uint16_t, NavigationResultCallback> navigation_result_callbacks_;
+
+    // 速度命令的上次发送时间（用于频率控制）
+    std::chrono::steady_clock::time_point lastSpeedCommandTime_ = std::chrono::steady_clock::now();
 };
 
 // RobotServerSdk类的实现
@@ -710,6 +896,26 @@ RTKRawData RobotServerSdk::request2103_RTKRawData() {
 
 std::string RobotServerSdk::getVersion() {
     return SDK_VERSION;
+}
+
+MotionControlResult RobotServerSdk::request2_SpeedControl(SpeedCommand cmd, float speed) {
+    return impl_->request2_SpeedControl(cmd, speed);
+}
+
+MotionControlResult RobotServerSdk::request2_ActionControl(ActionCommand cmd) {
+    return impl_->request2_ActionControl(cmd);
+}
+
+MotionControlResult RobotServerSdk::request2_Configure(ConfigCommand cmd, int value) {
+    return impl_->request2_Configure(cmd, value);
+}
+
+MotionControlResult RobotServerSdk::request2_SwitchBodyHeight(int height) {
+    return impl_->request2_SwitchBodyHeight(height);
+}
+
+MotionControlResult RobotServerSdk::request2_SwitchGait(GaitMode mode) {
+    return impl_->request2_SwitchGait(mode);
 }
 
 } // namespace robotserver_sdk
